@@ -114,7 +114,7 @@ void Bootloader(void) {
 
   }
 
-  Print("abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890", 0x0F);
+  Print("Test message", 0x0F);
 
   for(;;);
 
