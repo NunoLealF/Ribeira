@@ -34,9 +34,12 @@ CC = i686-elf-gcc
 #
 # -Wall, -Wextra, pedantic			- This enables all warnings. By default, gcc doesn't warn you about everything, and
 #																enabling all warnings helps you keep track of any possible mistakes.
+#
+# -funsigned-char								- Changes the default char type to unsigned, so that strings can use extended ASCII
+#																characters.
 
 LDFLAGS = -T Bootloader/Bootloader.ld
-CFLAGS = -ffunction-sections -ffreestanding -fno-builtin -std=gnu99 -m16 -Wall -Wextra -pedantic
+CFLAGS = -ffunction-sections -ffreestanding -fno-builtin -std=gnu99 -m16 -Wall -Wextra -pedantic -funsigned-char
 
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
@@ -76,6 +79,9 @@ Bootloader/Memory.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Bootloader/Memory.c -o Bootloader/Memory.o
 
+Bootloader/Graphics.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Bootloader/Graphics.c -o Bootloader/Graphics.o
 
 # This target compiles all the object files from the 2nd stage bootloader into one flat binary file. It references a
 # linker file, which puts the main function at the start (which is needed for a flat binary file), and also affirms
@@ -83,7 +89,7 @@ Bootloader/Memory.o:
 # link it into an ELF object file, and then we transform that into a flat binary file with objcopy. There is a method
 # to do this in gcc, but it might be unstable.
 
-Bootloader/Bootloader.bin: Bootloader/Bootloader.o Bootloader/Memory.o
+Bootloader/Bootloader.bin: Bootloader/Bootloader.o Bootloader/Memory.o Bootloader/Graphics.o
 	@echo "Building $@"
 	@$(CC) $(LDFLAGS) -o Bootloader/Bootloader.elf -ffreestanding -nostdlib $^ -lgcc
 	@objcopy -O binary Bootloader/Bootloader.elf Bootloader/Bootloader.bin
@@ -106,7 +112,7 @@ Boot.bin: Bootsector/Bootsector.bin Bootloader/Bootloader.bin
 # The All target cleans out the binary files from the previous build, and rebuilds the bootloader. The AllRun target
 # does the same as the All target, but it also runs it with Qemu.
 
-All: CleanBin Bootsector/Bootsector.bin Bootloader/Bootloader.o Bootloader/Memory.o Bootloader/Bootloader.bin Boot.bin CleanObj
+All: CleanBin Bootsector/Bootsector.bin Bootloader/Bootloader.o Bootloader/Memory.o Bootloader/Graphics.o Bootloader/Bootloader.bin Boot.bin CleanObj
 AllRun: All Run
 
 

@@ -1,6 +1,20 @@
+/* Ribeira | Written in 2022 by NunoLealF
+   To the extent possible under law, NunoLealF has waived all copyright and related or neighboring rights to this
+   software to the public domain worldwide. This software is distributed without any warranty.
+
+   You should have received a copy of the CC0 Public Domain Dedication along with this software.
+   If not, see <http://creativecommons.org/publicdomain/zero/1.0/>. */
+
+// WARNING! You must compile this and any other files from this 2nd stage bootloader with -m16!
+
 #include "Stdint.h"
 #include "Memory.h"
-// Compile this with m16!!! Please
+#include "Graphics.h"
+
+#ifndef __i686__
+#error  "You must compile this on a cross-compiler with an i686 target."
+#endif
+
 
 
 // There are still 2044 bytes left in this structure
@@ -11,52 +25,7 @@ typedef volatile struct _InfoTableType_ {
 
 } __attribute__((packed)) InfoTableType;
 
-volatile struct _Terminal_ {
 
-  uint16                  X;
-  uint16                  Y;
-  uint16                  Max_X;
-  uint16                  Max_Y;
-
-} Terminal;
-
-int Strlen(char* String) {
-
-  int Length = 0;
-  while (String[Length] != '\0') Length++;
-  return Length;
-
-}
-
-void Putchar(char Character, uint8 Color) {
-
-  *((uint16*)0xB8000+(Terminal.X)+(Terminal.Y*80)) = Character | Color << 8;
-
-  Terminal.X++;
-
-  if (Terminal.X >= Terminal.Max_X) {
-
-    Terminal.X = 0;
-    Terminal.Y++;
-
-  }
-
-  if (Terminal.Y >= Terminal.Max_Y) {
-
-    // Todo: Scrolling, also basically everything as well
-
-  }
-
-}
-
-void Print(char* String, uint8 Color) {
-
-  for (int i = 0; i < Strlen(String); i++) {
-
-    Putchar(String[i], Color);
-
-  }
-}
 
 void Bootloader(void) {
 
@@ -66,14 +35,9 @@ void Bootloader(void) {
   Memset((void*)InfoTable, 0, 5120);
 
   // Initialize the Terminal table, which is used for storing terminal data, and clear out the terminal.
-  // Assuming a 80x25 text mode here.
+  // Assuming a VGA 80x25 text mode here.
 
-  Terminal.X = 0;
-  Terminal.Y = 0;
-  Terminal.Max_X = 80;
-  Terminal.Max_Y = 25;
-
-  Memset((void*)0xB8000, 0, (80*25*2));
+  InitializeTerminal(80, 25, 2, 0xB8000);
 
   // Use the BIOS call int 15h e820h to get a memory map of the system, with up to 128 entries.
 
@@ -114,8 +78,16 @@ void Bootloader(void) {
 
   }
 
-  Print("Test message", 0x0F);
-
+  Print("You are in the 2nd stage bootloader.\n\r\n\rNewline (without carriage return):\n", 0x0F); Print("*", 0x09);
+  Print("\n\rNewline and carriage return:\n\r", 0x0F); Print("*", 0x09);
+  Print("\n\r\n\rTab size is 2.\n\r0 tabs\n\r\t1 tab\n\r\t\t2 tabs\n\r\t\t\t3 tabs\n\r", 0x0F);
+  Print("\n\rSupports ", 0x0F); Print("pretty ", 0x1F); Print("colours", 0x3F); Print(", and ", 0x0F);
+  Print("high bit colours", 0x9F); Print(" as well.", 0x0F);
+  Print("\n\r\n\rTODO: Add a crash screen, make it so that it crashes when it can't call E820 or when it doesn't have enough RAM, and finish filtering out the E820 results.     Don't bother with making sure your code only runs with -m16, it's impossible.", 0x03);
+  Print("\n\r15:47 17th April 2022 UTC+1", 0x30);
   for(;;);
+
+  // Note: The bootloader should be named Levada, and the project/OS itself should be named Ribeira
+  // Delete this if you ever make it public
 
 }
