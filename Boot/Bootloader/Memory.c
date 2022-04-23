@@ -77,7 +77,7 @@ uint32 __attribute__((noinline)) GetMemoryMapEntry(MemoryMapEntryStruct* Entry, 
   static uint32 Signature = 0x534D4150;
   static uint32 EntrySize = 24;
 
-  asm volatile( "int $0x15" :
+  __asm__ volatile( "int $0x15" :
                 "=a"  (Signature),  "=b"  (EntryNum) :
                 "a"   (IntCall),    "b"   (EntryNum), "c" (EntrySize), "d" (Signature), "D" (Entry));
 
@@ -185,7 +185,7 @@ void* Memmove(void* restrict DestinationAddress, const void* restrict SourceAddr
 
     for (unsigned long i = Size; i > 0; i--) {
 
-      ((uint8*)DestinationAddress)[(i - 1)] = ((uint8*)SourceAddress)[(i - 1)];
+      ((uint8*)DestinationAddress)[i - 1] = ((uint8*)SourceAddress)[i - 1];
 
     }
 

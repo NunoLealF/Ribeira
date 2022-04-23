@@ -53,7 +53,7 @@ Start:
   mov sp, 0x7B00
 
   mov ah, 0x02
-  mov al, 0x35
+  mov al, 0x30
   mov bx, 0x7E00
   mov ch, 0x00
   mov cl, 0x02

@@ -97,8 +97,8 @@ Bootloader/Bootloader.bin: Bootloader/Bootloader.o Bootloader/Memory.o Bootloade
 
 # This target creates a 32 KiB image that contains both our 1st and 2nd stage bootloader. You can burn this image onto
 # any bootable medium. It writes Bootsector.bin (the bootsector, or our 1st stage bootloader) into the first sector,
-# and Bootloader.bin (our 2nd stage bootloader) into the next 47 sectors. Bootloader.bin must not be larger than 53
-# sectors, or 26.5KiB. The last 10 sectors (5KiB) are reserved for storage for things like the E820 memory map, which
+# and Bootloader.bin (our 2nd stage bootloader) into the next 47 sectors. Bootloader.bin must not be larger than 48
+# sectors, or 24KiB. The last 16 sectors (8KiB) are reserved for storage for things like the E820 memory map, which
 # is loaded by the rest of the bootloader into memory.
 # This function uses dd, so it may not work on Windows.
 

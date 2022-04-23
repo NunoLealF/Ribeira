@@ -15,24 +15,48 @@
 #error  "You must compile this on a cross-compiler with an i686 target."
 #endif
 
+// 8192 bytes
+// L/H Signature: 8 bytes    (8184 bytes remaining), 8
+// Memorymap:     3072 bytes (5112 bytes remaining), 3080
+// Memorymap-ec:  4 bytes (5108 bytes remaining), 3084
 
+// ! KEEP IN MIND !
+// LOWSIGNATURE = 0x333C6557
+// HIGHSIGNATURE = 0x31323665
 
-// There are still 2044 bytes left in this structure
 typedef volatile struct _InfoTableType_ {
 
+  uint32                  LowSignature;
+  uint32                  HighSignature;
   MemoryMapEntryStruct    MemoryMap[128];
-  uint32                  MemoryMapEntryCount;
+  uint32                  MemoryMapLastEntry;
 
 } __attribute__((packed)) InfoTableType;
 
 
 
+void Crash(char* Why) {
+
+  Print("\n\n\rUnable to continue booting. Reason given:\n\r", 0x0C);
+  Print(Why, 0x07);
+  Print("\n\n\rTo restart your system, press Ctrl+Alt+Delete.", 0x0F);
+
+  for(;;);
+
+}
+
+
+
 void Bootloader(void) {
 
-  // Allocate up to 5KiB space for the InfoTable struct at EA00h in memory, up to FE00h, and reset the table.
+  // Allocate up to 8KiB space for the InfoTable struct at E000h in memory, up to FFFFh, and initialize the table.
 
-  InfoTableType *InfoTable = (InfoTableType*)0xEA00;
-  Memset((void*)InfoTable, 0, 5120);
+  InfoTableType *InfoTable = (InfoTableType*)0xE000;
+
+  Memset((void*)InfoTable, 0, 8192);
+
+  InfoTable->LowSignature  = 0x333C6557;
+  InfoTable->HighSignature = 0x31323665;
 
   // Initialize the Terminal table, which is used for storing terminal data, and clear out the terminal.
   // Assuming a VGA 80x25 text mode here.
@@ -41,51 +65,51 @@ void Bootloader(void) {
 
   // Use the BIOS call int 15h e820h to get a memory map of the system, with up to 128 entries.
 
-  for (uint32 i = 0; i < 128; i++) {
-    i = GetMemoryMapEntry(&InfoTable->MemoryMap[i], i);
-    if (i == uint_max) break; // Todo: Crash
-    InfoTable->MemoryMapEntryCount = i;
-    if (i == 0) break;
+  Print("Getting the system memory map.\n\r", 0x0F);
 
-  }
+  for (int i = 0; i < 128; i++) {
 
-  // Clear nonexistent entries (where the size is 0).
+    uint32 MemoryMapReturnValue = GetMemoryMapEntry(&InfoTable->MemoryMap[i], i);
+    InfoTable->MemoryMapLastEntry = i;
 
-  for (uint32 i = 0; i <= InfoTable->MemoryMapEntryCount; i++) {
-    if ((InfoTable->MemoryMap[i].LowEntryLength = 0) && (InfoTable->MemoryMap[i].HighEntryLength = 0)) {
+    if (MemoryMapReturnValue == 0) {
 
-        Memset((void*)&InfoTable->MemoryMap[i], 0, 24);
-      }
+      break;
 
-  }
+    } else if (MemoryMapReturnValue == uint_max) {
 
-  // Join any adjacent entries with the same size.
-
-  for (uint32 i = 0; i <= InfoTable->MemoryMapEntryCount; i++) {
-
-    if (InfoTable->MemoryMap[i].Type != InfoTable->MemoryMap[(i+1)].Type) continue;
-
-    uint32 MemoryMapCurrentLowEnd = InfoTable->MemoryMap[i].LowBaseAddress + InfoTable->MemoryMap[i].LowEntryLength;
-    uint32 MemoryMapCurrentHighEnd = InfoTable->MemoryMap[i].HighBaseAddress + InfoTable->MemoryMap[i].HighEntryLength;
-    uint32 MemoryMapNextLowStart = InfoTable->MemoryMap[(i+1)].LowBaseAddress;
-    uint32 MemoryMapNextHighStart = InfoTable->MemoryMap[(i+1)].HighBaseAddress;
-
-    if (InfoTable->MemoryMap[i].HighBaseAddress > 0) {
-
-    } else {
+      Crash("Unable to get a memory map using the E820 BIOS function.\n\r"
+            "Your system you should probably use a form of struct inheritence (c -style) to make this a little easier for everyone to figure outlikely doesn't meet the minimum requirements."); break;
 
     }
 
   }
 
-  Print("You are in the 2nd stage bootloader.\n\r\n\rNewline (without carriage return):\n", 0x0F); Print("*", 0x09);
-  Print("\n\rNewline and carriage return:\n\r", 0x0F); Print("*", 0x09);
-  Print("\n\r\n\rTab size is 2.\n\r0 tabs\n\r\t1 tab\n\r\t\t2 tabs\n\r\t\t\t3 tabs\n\r", 0x0F);
-  Print("\n\rSupports ", 0x0F); Print("pretty ", 0x1F); Print("colours", 0x3F); Print(", and ", 0x0F);
-  Print("high bit colours", 0x9F); Print(" as well.", 0x0F);
-  Print("\n\r\n\rTODO: Add a crash screen, make it so that it crashes when it can't call E820 or when it doesn't have enough RAM, and finish filtering out the E820 results.     Don't bother with making sure your code only runs with -m16, it's impossible.", 0x03);
-  Print("\n\r15:47 17th April 2022 UTC+1", 0x30);
+  // Warning: Literally all the code in this function and like half of the code otherwise in this file is incomplete
+
+  int freeram = 0;
+
+  for (uint32 i = 0; i <= InfoTable->MemoryMapLastEntry; i++) {
+    if (InfoTable->MemoryMap[i].Type != 1) continue;
+    freeram += InfoTable->MemoryMap[i].LowEntryLength;
+  }
+
+  freeram /= 1024;
+
+  char buffer[32]; Memset(buffer, 0, 32);
+  char thing[9]; Memcpy(thing, (void*)&InfoTable->LowSignature, 8); thing[9] = '\0';
+
+  Print("Test: Bootloader is at ", 0x0F);
+  Itoa((unsigned long)&Bootloader, buffer, 16);
+  Print(buffer, 0x07); Print(".\n\rInfoTable->LowSignature is at ", 0x0F);
+  Print(Itoa((unsigned long)&InfoTable->LowSignature, buffer, 16), 0x07);
+  Print(".\n\rInfoTable->MemoryMapLastEntry is at ", 0x0F); Print(Itoa((unsigned long)&InfoTable->MemoryMapLastEntry, buffer, 16), 0x07);
+  Print(".\n\rTest 2: ", 0x0F); Print(Itoa(InfoTable->LowSignature, buffer, 16), 0x07); Putchar(' ', 0x0F); Print(Itoa(InfoTable->HighSignature, buffer, 16), 0x07);
+  Print(" Ascii: ", 0x0F); Print(thing, 0x07); Print("\n\n\rRibeira project, Levada bootloader. Licensed as CC0.\n\r12:21 23 April 2022 UTC+1", 0x30);
+
+
   for(;;);
+
 
   // Note: The bootloader should be named Levada, and the project/OS itself should be named Ribeira
   // Delete this if you ever make it public

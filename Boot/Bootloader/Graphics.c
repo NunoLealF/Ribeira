@@ -53,9 +53,9 @@ TerminalStruct Terminal;
     This function measures the length of a string. It does this by counting the amount of characters in the string
     until it encounters a null byte.                                                                                  */
 
-int Strlen(char* String) {
+unsigned short Strlen(char* String) {
 
-  int Length = 0;
+  unsigned short Length = 0;
   while (String[Length] != '\0') Length++;
   return Length;
 
@@ -88,9 +88,10 @@ void InitializeTerminal(uint16 Rows, uint16 Columns, uint16 TabSize, uint32 Fram
   Terminal.TabSize = TabSize;
   Terminal.Framebuffer = Framebuffer;
 
+
   for (int i = 0; i < (Rows * Columns); i++) {
 
-    *((uint16*)Framebuffer+i) = 0;
+    *((uint16*)Framebuffer + i) = 0;
 
   }
 
@@ -113,6 +114,7 @@ inline static void Scroll(void) {
   Memmove((void*) Terminal.Framebuffer,
           (void*)(Terminal.Framebuffer + (Terminal.Max_X * 2)),
                  (Terminal.Max_X       * ((Terminal.Max_Y - 1) * 2)));
+
 
   for (uint16 i = 0; i < Terminal.Max_X; i++) {
 
@@ -171,7 +173,7 @@ void Putchar(char Character, uint8 Color) {
 
     case '\b':
 
-      *((uint16*)Terminal.Framebuffer+(Terminal.X)+(Terminal.Y*80)) = ' ' | Color << 8;
+      *((uint16*)Terminal.Framebuffer + (Terminal.X) + (Terminal.Y * 80)) = ' ' | Color << 8;
 
       if (Terminal.X == 0) {
 
@@ -238,7 +240,7 @@ void Putchar(char Character, uint8 Color) {
 
       }
 
-      *((uint16*)Terminal.Framebuffer+Terminal.X+(Terminal.Y*80)) = Character | Color << 8;
+      *((uint16*)Terminal.Framebuffer + Terminal.X + (Terminal.Y * 80)) = Character | Color << 8;
 
       Terminal.X++;
       break;
@@ -251,14 +253,9 @@ void Putchar(char Character, uint8 Color) {
 
 /*  Print(): Writes a string onto the terminal.
 
-    Input:        char* String                     - This should be the string that you want to write onto the
-                                                     terminal. While it's discouraged to use signed chars here, you
-                                                     can use whatever signedness that your compiler has for char.
+    Input:        char* String                     - (Same as Putchar)
 
-    Input:        uint8 Color                      - This is the color attribute of the character you want to write.
-                                                   The highest four bits represent the background color, while the
-                                                   lower four bits represent the foreground color. The highest bit
-                                                   may be reserved as a 'blinking' attribute.
+    Input:        uint8 Color                      - (Same as Putchar)
 
     This function is just a loop that calls Putchar() for every character in the given string. The same rules apply
     here as they do in Putchar().                                                                                     */
@@ -270,5 +267,66 @@ void Print(char* String, uint8 Color) {
     Putchar(String[i], Color);
 
   }
+
+}
+
+
+
+/*  Itoa(): Converts an integer into a string.
+
+    Input:        unsigned long Value              - This should be the value that you want to convert into a string.
+                                                   This is taken as an unsigned value, and this function is not built
+                                                   to handle negative numbers.
+
+    Input/Output: char* Buffer                     - This is the buffer that you want Itoa to write to and return.
+                                                   The size must be set by the caller. Upon completion, for
+                                                   convenience, this function will return this string back.
+
+    Input:        unsigned short Base              - This is the 'base', or numbering system that you want to convert
+                                                   your value to as a string. Binary is base 2, */
+
+
+char* Itoa(unsigned long Value, char* Buffer, unsigned short Base) {
+
+  if ((Base > 36) || (Base < 2)) {
+
+    Buffer[0] = '\0';
+    return Buffer;
+
+  }
+
+  unsigned int i = 0;
+
+  do {
+
+    unsigned long Digit = Value % Base;
+
+    if (Digit < 10) {
+
+      Buffer[i++] = Digit + '0';
+
+    } else {
+
+      Buffer[i++] = Digit - 10 + 'A';
+
+    }
+
+    Value /= Base;
+
+  } while (Value > 0);
+
+  Buffer[i] = '\0';
+
+  unsigned int j = i - 1;
+
+  for (unsigned int k = 0; k < (i / 2); k++) {
+
+    char SwapBuffer = Buffer[k];
+    Buffer[k] = Buffer[j - k];
+    Buffer[j - k] = SwapBuffer;
+
+  }
+
+  return Buffer;
 
 }
