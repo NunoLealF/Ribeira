@@ -25,9 +25,12 @@
 
     This struct contains the settings for a VGA text mode terminal. The default text mode is 80x25 with 8 or 16
     colors, and it is located at 0xB8000, so you'd fill it out as {0, 0, 80, 25, 2, 0xB8000}.
+
     This is not the best or the most efficient way to use the terminal, but this is only supposed to serve as a
     replacement until we switch to a graphics mode. It's possible to write to the terminal without relying upon
-    this struct, but it's discouraged.                                                                                */
+    this struct, but it's discouraged.
+
+*/
 
 typedef struct _TerminalStruct_ {
 
@@ -51,7 +54,9 @@ TerminalStruct Terminal;
     Output:       int                                - This is the length of the given string.
 
     This function measures the length of a string. It does this by counting the amount of characters in the string
-    until it encounters a null byte.                                                                                  */
+    until it encounters a null byte.
+
+*/
 
 unsigned short Strlen(char* String) {
 
@@ -74,10 +79,15 @@ unsigned short Strlen(char* String) {
 
     This function initializes the data in the Terminal struct, which other functions rely on to access the terminal,
     and it clears it out as well.
+
     It does this by resetting the X and Y parameters in the struct, and it assigns the other parameters directly to
     the Terminal struct.
+
     It's assumed that the terminal is a VGA text mode, and it assumes that the framebuffer is consisted by cells,
-    where the first byte is an ASCII character, and the second byte is a color attribute.                                                                                                  */
+    where the first byte is an ASCII character, and the second byte is a color attribute.
+
+*/
+
 
 void InitializeTerminal(uint16 Rows, uint16 Columns, uint16 TabSize, uint32 Framebuffer) {
 
@@ -105,9 +115,13 @@ void InitializeTerminal(uint16 Rows, uint16 Columns, uint16 TabSize, uint32 Fram
 
     This function does two things; it pushes every line but the first line (discarding it) up to make room for another
     line, and it clears the last line.
+
     It does not modify anything in the Terminal struct (including X and Y), although it relies on it.
+
     This function should be called whenever there isn't enough room on the terminal to continue to the next line.
-    As this is a static function, it is not accessible outside of this file. It is also inlined.                      */
+    As this is a static function, it is not accessible outside of this file. It is also inlined.
+
+*/
 
 inline static void Scroll(void) {
 
@@ -141,10 +155,14 @@ inline static void Scroll(void) {
     anything, and instead do something else: a null byte (\0) isn't processed at all, a newline (\n) moves the cursor
     to the next column, a carriage return (\r) moves the cursor to the start of the row, and a tab (\t) moves the
     cursor a certain amount of bytes ahead, depending on what is present in Terminal.TabSize.
+
     This function automatically goes to the next row and/or scrolls if needed.
+
     The most commonly used attribute is 0x0F, which is a white foreground (text) on a black background. You may use
     up to 16 colors for the foreground, and up to 8 or 16 background colors depending on the machine, although it's
-    recommended to only use up to 8 colors for the background.                                                        */
+    recommended to only use up to 8 colors for the background.
+
+*/
 
 void Putchar(char Character, uint8 Color) {
 
@@ -258,7 +276,9 @@ void Putchar(char Character, uint8 Color) {
     Input:        uint8 Color                      - (Same as Putchar)
 
     This function is just a loop that calls Putchar() for every character in the given string. The same rules apply
-    here as they do in Putchar().                                                                                     */
+    here as they do in Putchar().
+
+*/
 
 void Print(char* String, uint8 Color) {
 
@@ -278,12 +298,31 @@ void Print(char* String, uint8 Color) {
                                                    This is taken as an unsigned value, and this function is not built
                                                    to handle negative numbers.
 
-    Input/Output: char* Buffer                     - This is the buffer that you want Itoa to write to and return.
-                                                   The size must be set by the caller. Upon completion, for
-                                                   convenience, this function will return this string back.
+    Input/Output: char* Buffer                     - This is the buffer that you want Itoa to write the converted
+                                                   number to and return. The size must be set by the caller, and the
+                                                   function does not check if it is large enough, so be cautious.
+                                                   Upon completion, for convenience, this function will return the
+                                                   buffer back.
 
     Input:        unsigned short Base              - This is the 'base', or numbering system that you want to convert
-                                                   your value to as a string. Binary is base 2, */
+                                                   your value to as a string. Binary is base 2, octal is base 8,
+                                                   decimal is base 10, and hex is base 16. Follows the 0->Z order.
+
+    This function converts an (unsigned) integer to a string. It takes in the value to be converted, a buffer to
+    write the number as a string to (which is later returned), and the base (numbering system) to convert it to.
+    This function can be fairly useful for many purposes, but one of the most important uses is to convert and
+    display values for the end user.
+
+    For example, an exception handler could report that a fault happened at 7E00h in memory, and use the Itoa
+    function to convert 7E00h into the string "7E00", which could then be displayed to the end user. This conversion
+    is necessary, as internally the memory address and/or number 7E00h is represented as the two bytes 00 and 7E,
+    which is not the same as the string "7E00", or show up as '7E00' on screen.
+
+    Another important thing to note is the base, or numbering system. Binary is base 2 (0-1), octal is base 8 (0-7),
+    decimal is base 10 (0-9), and hexadecimal is base 16 (0-F). You can use a base between 2 and 36 with Itoa, with
+    any number outside of that boundary being considered invalid and will only return an empty string.
+
+*/
 
 
 char* Itoa(unsigned long Value, char* Buffer, unsigned short Base) {

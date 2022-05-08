@@ -63,7 +63,7 @@ void Bootloader(void) {
 
   InitializeTerminal(80, 25, 2, 0xB8000);
 
-  // Use the BIOS call int 15h e820h to get a memory map of the system, with up to 128 entries.
+  // Use the BIOS call int 15h E820h to get a memory map of the system, with up to 128 entries.
 
   Print("Getting the system memory map.\n\r", 0x0F);
 
@@ -105,13 +105,13 @@ void Bootloader(void) {
   Print(Itoa((unsigned long)&InfoTable->LowSignature, buffer, 16), 0x07);
   Print(".\n\rInfoTable->MemoryMapLastEntry is at ", 0x0F); Print(Itoa((unsigned long)&InfoTable->MemoryMapLastEntry, buffer, 16), 0x07);
   Print(".\n\rTest 2: ", 0x0F); Print(Itoa(InfoTable->LowSignature, buffer, 16), 0x07); Putchar(' ', 0x0F); Print(Itoa(InfoTable->HighSignature, buffer, 16), 0x07);
-  Print(" Ascii: ", 0x0F); Print(thing, 0x07); Print("\n\n\rRibeira project, Levada bootloader. Licensed as CC0.\n\r12:21 23 April 2022 UTC+1", 0x30);
+  Print(" Ascii: ", 0x0F); Print(thing, 0x07); Print("\n\n\rRibeira bootloader. Licensed as CC0.\n\rTODO: Add support for a20 and then vbe, don't do cpuid that's for pmode\n\r21:55 8 May 2022 UTC+1", 0xB0);
 
 
   for(;;);
 
 
-  // Note: The bootloader should be named Levada, and the project/OS itself should be named Ribeira
-  // Delete this if you ever make it public
+  // Note: The bootloader is called Ribeira
+
 
 }
