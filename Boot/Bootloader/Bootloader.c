@@ -5,9 +5,11 @@
    You should have received a copy of the CC0 Public Domain Dedication along with this software.
    If not, see <http://creativecommons.org/publicdomain/zero/1.0/>. */
 
-// WARNING! You must compile this and any other files from this 2nd stage bootloader with -m16!
+// WARNING: This is 16-bit C code. You should compile this, along with any other files from the second stage
+// bootloader, with the -m16 (or equivalent) flag.
 
 #include "Stdint.h"
+#include "Error.h"
 #include "Memory.h"
 #include "Graphics.h"
 
@@ -24,21 +26,37 @@
 // LOWSIGNATURE = 0x333C6557
 // HIGHSIGNATURE = 0x31323665
 
-typedef volatile struct _InfoTableType_ {
+typedef volatile struct _BootTableType_ {
 
   uint32                  LowSignature;
   uint32                  HighSignature;
   MemoryMapEntryStruct    MemoryMap[128];
   uint32                  MemoryMapLastEntry;
 
-} __attribute__((packed)) InfoTableType;
+} __attribute__((packed)) BootTableType;
 
 
 
-void Crash(char* Why) {
+/*  Crash(): Crash handler for the system.
 
-  Print("\n\n\rUnable to continue booting. Reason given:\n\r", 0x0C);
-  Print(Why, 0x07);
+    Input:        unsigned long ErrorCode            - This specifies the error code to crash with.
+
+    This function is a crash handler for the system, which should be called whenever there is a need to crash the
+    system. It gives out the error code, along with the associated message (defined in Error.h), and halts the
+    system. It doesn't disable interrupts, so you can still use Ctrl+Alt+Delete to restart the system in this state.
+*/
+
+void Crash(unsigned long ErrorCode) {
+
+  char ErrorCodeString[8];
+  Itoa(ErrorCode, ErrorCodeString, 10);
+
+  Print("\n\n\rUnable to continue booting (Error ", 0x0C);
+  Print(ErrorCodeString, 0x07);
+  Print("), halting the system. Reason given:\n\r", 0x0C);
+
+  Print(ErrorMessage[ErrorCode], 0x07);
+
   Print("\n\n\rTo restart your system, press Ctrl+Alt+Delete.", 0x0F);
 
   for(;;);
@@ -47,30 +65,38 @@ void Crash(char* Why) {
 
 
 
+/*  Bootloader(): The second-stage system bootloader.
+
+    (No inputs or outputs)
+
+    This function is the second-stage bootloader. It handles many tasks, such as initializing the BootTable,
+    initializing the terminal, gathering information from the system (such as the memory map), among others.
+*/
+
 void Bootloader(void) {
 
-  // Allocate up to 8KiB space for the InfoTable struct at E000h in memory, up to FFFFh, and initialize the table.
+  // Allocate up to 8KiB space for the BootTable struct at E000h in memory, up to FFFFh, and initialize the table.
 
-  InfoTableType *InfoTable = (InfoTableType*)0xE000;
+  BootTableType *BootTable = (BootTableType*)0xE000;
 
-  Memset((void*)InfoTable, 0, 8192);
+  Memset((void*)BootTable, 0, 8192);
 
-  InfoTable->LowSignature  = 0x333C6557;
-  InfoTable->HighSignature = 0x31323665;
+  BootTable->LowSignature  = 0x333C6557;
+  BootTable->HighSignature = 0x31323665;
 
   // Initialize the Terminal table, which is used for storing terminal data, and clear out the terminal.
   // Assuming a VGA 80x25 text mode here.
 
   InitializeTerminal(80, 25, 2, 0xB8000);
 
-  // Use the BIOS call int 15h E820h to get a memory map of the system, with up to 128 entries.
+  // Use the BIOS call int 15h e820h to get a memory map of the system, with up to 128 entries.
 
   Print("Getting the system memory map.\n\r", 0x0F);
 
   for (int i = 0; i < 128; i++) {
 
-    uint32 MemoryMapReturnValue = GetMemoryMapEntry(&InfoTable->MemoryMap[i], i);
-    InfoTable->MemoryMapLastEntry = i;
+    uint32 MemoryMapReturnValue = GetMemoryMapEntry(&BootTable->MemoryMap[i], i);
+    BootTable->MemoryMapLastEntry = i;
 
     if (MemoryMapReturnValue == 0) {
 
@@ -78,8 +104,7 @@ void Bootloader(void) {
 
     } else if (MemoryMapReturnValue == uint_max) {
 
-      Crash("Unable to get a memory map using the E820 BIOS function.\n\r"
-            "Your system you should probably use a form of struct inheritence (c -style) to make this a little easier for everyone to figure outlikely doesn't meet the minimum requirements."); break;
+      Crash(1); break;
 
     }
 
@@ -87,26 +112,27 @@ void Bootloader(void) {
 
   // Warning: Literally all the code in this function and like half of the code otherwise in this file is incomplete
 
-  int freeram = 0;
+  int freeram = 0; // THIS MEASURES RAM UNDER 4GB AND NOT EVEN PROPERLY
 
-  for (uint32 i = 0; i <= InfoTable->MemoryMapLastEntry; i++) {
-    if (InfoTable->MemoryMap[i].Type != 1) continue;
-    freeram += InfoTable->MemoryMap[i].LowEntryLength;
+  for (uint32 i = 0; i <= BootTable->MemoryMapLastEntry; i++) {
+    if (BootTable->MemoryMap[i].Type != 1) continue;
+    freeram += BootTable->MemoryMap[i].LowEntryLength;
   }
 
   freeram /= 1024;
 
   char buffer[32]; Memset(buffer, 0, 32);
-  char thing[9]; Memcpy(thing, (void*)&InfoTable->LowSignature, 8); thing[9] = '\0';
+  char thing[9]; Memcpy(thing, (void*)&BootTable->LowSignature, 8); thing[9] = '\0';
 
   Print("Test: Bootloader is at ", 0x0F);
   Itoa((unsigned long)&Bootloader, buffer, 16);
-  Print(buffer, 0x07); Print(".\n\rInfoTable->LowSignature is at ", 0x0F);
-  Print(Itoa((unsigned long)&InfoTable->LowSignature, buffer, 16), 0x07);
-  Print(".\n\rInfoTable->MemoryMapLastEntry is at ", 0x0F); Print(Itoa((unsigned long)&InfoTable->MemoryMapLastEntry, buffer, 16), 0x07);
-  Print(".\n\rTest 2: ", 0x0F); Print(Itoa(InfoTable->LowSignature, buffer, 16), 0x07); Putchar(' ', 0x0F); Print(Itoa(InfoTable->HighSignature, buffer, 16), 0x07);
-  Print(" Ascii: ", 0x0F); Print(thing, 0x07); Print("\n\n\rRibeira bootloader. Licensed as CC0.\n\rTODO: Add support for a20 and then vbe, don't do cpuid that's for pmode\n\r21:55 8 May 2022 UTC+1", 0xB0);
+  Print(buffer, 0x07); Print(".\n\rBootTable->LowSignature is at ", 0x0F);
+  Print(Itoa((unsigned long)&BootTable->LowSignature, buffer, 16), 0x07);
+  Print(".\n\rBootTable->MemoryMapLastEntry is at ", 0x0F); Print(Itoa((unsigned long)&BootTable->MemoryMapLastEntry, buffer, 16), 0x07);
+  Print(".\n\rTest 2: ", 0x0F); Print(Itoa(BootTable->LowSignature, buffer, 16), 0x07); Putchar(' ', 0x0F); Print(Itoa(BootTable->HighSignature, buffer, 16), 0x07);
+  Print(" Ascii: ", 0x0F); Print(thing, 0x07); Print("\n\n\rRibeira bootloader. Licensed as CC0.\n\n\rTODO:\n\r - Add support for the detection of, and enabling of the A20 Line, before E820\n\r(Challenges: We've got no machines with A20 off by default to test this out)\n\n\r - Add support for VBE\n\r(Challenges: Not sure yet, but don't set any modes in this stage yet)\n\n\rCPUID is only for protected mode, it won't work in real mode, trust me!\n\r19:04 15 May 2022 UTC+1", 0x9F);
 
+  Crash(0);
 
   for(;;);
 

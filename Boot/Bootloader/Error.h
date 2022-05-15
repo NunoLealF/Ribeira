@@ -8,21 +8,19 @@
 // WARNING: This is 16-bit C code. You should compile this, along with any other files from the second stage
 // bootloader, with the -m16 (or equivalent) flag.
 
-#ifndef _STDINT_H_
-#define _STDINT_H_
+#ifndef _ERROR_H_
+#define _ERROR_H_
 
-typedef signed char    int8;
-typedef unsigned char  uint8;
-typedef signed short   int16;
-typedef unsigned short uint16;
-typedef signed long    int32;
-typedef unsigned long  uint32;
-typedef int            bool;
+const char* ErrorMessage[] = {
 
-#define int_max  0xFFFFFFF
-#define uint_max 0xFFFFFFFF
+  "No reason given, or invalid error code.", // 0
 
-#define true     0
-#define false    1
+  "This error code should not happen here.", // 1
+
+  "Failed to retrieve the system's memory map with the BIOS function \n\r" // 2
+  "int 15h, ax e820h. This may happen if your machine is very old. \n\r" // 2
+  "Make sure that your system meets the minimum requirements.", // 2
+
+};
 
 #endif

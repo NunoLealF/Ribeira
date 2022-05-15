@@ -5,6 +5,9 @@
    You should have received a copy of the CC0 Public Domain Dedication along with this software.
    If not, see <http://creativecommons.org/publicdomain/zero/1.0/>. */
 
+// WARNING: This is 16-bit C code. You should compile this, along with any other files from the second stage
+// bootloader, with the -m16 (or equivalent) flag.
+
 #include "Stdint.h"
 #include "Memory.h"
 
@@ -49,7 +52,7 @@ TerminalStruct Terminal;
 
 /*  Strlen(): This function measures the length of a string.
 
-    Input:        char* String                       - This specifies the string you want to measure the length of.
+    Input:        const char* String                 - This specifies the string you want to measure the length of.
 
     Output:       int                                - This is the length of the given string.
 
@@ -58,7 +61,7 @@ TerminalStruct Terminal;
 
 */
 
-unsigned short Strlen(char* String) {
+unsigned short Strlen(const char* String) {
 
   unsigned short Length = 0;
   while (String[Length] != '\0') Length++;
@@ -87,7 +90,6 @@ unsigned short Strlen(char* String) {
     where the first byte is an ASCII character, and the second byte is a color attribute.
 
 */
-
 
 void InitializeTerminal(uint16 Rows, uint16 Columns, uint16 TabSize, uint32 Framebuffer) {
 
@@ -142,7 +144,7 @@ inline static void Scroll(void) {
 
 /*  Putchar(): Writes a character onto the terminal.
 
-    Input:        char Character                     - This should be the character that you want to write onto the
+    Input:        const char Character               - This should be the character that you want to write onto the
                                                      terminal. While it's discouraged to use signed chars here, you
                                                      can use whatever signedness that your compiler has for char.
 
@@ -159,12 +161,13 @@ inline static void Scroll(void) {
     This function automatically goes to the next row and/or scrolls if needed.
 
     The most commonly used attribute is 0x0F, which is a white foreground (text) on a black background. You may use
-    up to 16 colors for the foreground, and up to 8 or 16 background colors depending on the machine, although it's
-    recommended to only use up to 8 colors for the background.
+    up to 16 colors for the foreground, and up to 8 background colors depending on the machine. Some machines may
+    support 16 background colors, but not all do, instead using the highest bit as a 'blinking attribute', so it's
+    not advisable to use them.
 
 */
 
-void Putchar(char Character, uint8 Color) {
+void Putchar(const char Character, uint8 Color) {
 
   switch(Character) {
 
@@ -271,7 +274,7 @@ void Putchar(char Character, uint8 Color) {
 
 /*  Print(): Writes a string onto the terminal.
 
-    Input:        char* String                     - (Same as Putchar)
+    Input:        const char* String               - (Same as Putchar)
 
     Input:        uint8 Color                      - (Same as Putchar)
 
@@ -280,7 +283,7 @@ void Putchar(char Character, uint8 Color) {
 
 */
 
-void Print(char* String, uint8 Color) {
+void Print(const char* String, uint8 Color) {
 
   for (int i = 0; i < Strlen(String); i++) {
 
@@ -298,7 +301,7 @@ void Print(char* String, uint8 Color) {
                                                    This is taken as an unsigned value, and this function is not built
                                                    to handle negative numbers.
 
-    Input/Output: char* Buffer                     - This is the buffer that you want Itoa to write the converted
+    Input/Output: volatile char* Buffer            - This is the buffer that you want Itoa to write the converted
                                                    number to and return. The size must be set by the caller, and the
                                                    function does not check if it is large enough, so be cautious.
                                                    Upon completion, for convenience, this function will return the
@@ -323,7 +326,6 @@ void Print(char* String, uint8 Color) {
     any number outside of that boundary being considered invalid and will only return an empty string.
 
 */
-
 
 char* Itoa(unsigned long Value, char* Buffer, unsigned short Base) {
 

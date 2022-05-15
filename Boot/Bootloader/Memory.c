@@ -5,9 +5,12 @@
    You should have received a copy of the CC0 Public Domain Dedication along with this software.
    If not, see <http://creativecommons.org/publicdomain/zero/1.0/>. */
 
+// WARNING: This is 16-bit C code. You should compile this, along with any other files from the second stage
+// bootloader, with the -m16 (or equivalent) flag.
+
 #include "Stdint.h"
 
-/*  MemoryMapEntryStruct: This is a struct that defines an int 15h, eax E820h memory map entry. You can also convert
+/*  MemoryMapEntryStruct: This is a struct that defines an int 15h, eax e820h memory map entry. You can also convert
     other memory map entry types (for example, from int 15h, ax e801h) to this type of entry.
 
     uint32 LowBaseAddress, HighBaseAddress           - This is the physical base address of the memory map entry. It's
@@ -18,7 +21,7 @@
                                                      an entry that starts at 10000h with a length of 20000h goes from
                                                      10000h to 30000h in memory. This is also split into two.
 
-    uint32 Type                                      - This is the type of the memory map entry. With the E820h BIOS
+    uint32 Type                                      - This is the type of the memory map entry. With the e820h BIOS
                                                      function, type 1 is usable, type 2 and 4 is reserved, type 3 is
                                                      reclaimable memory from ACPI, type 5 is bad memory, type 6 is
                                                      disabled memory, type 7 is persistent memory, and any other type
@@ -48,7 +51,7 @@ typedef volatile struct _MemoryMapEntryStruct_ {
 
 
 
-/*  GetMemoryMapEntry(): This function calls the BIOS function int 15h eax E820h to obtain a memory map entry.
+/*  GetMemoryMapEntry(): This function calls the BIOS function int 15h eax e820h to obtain a memory map entry.
 
     Input:        struct MemoryMapEntryStruct        - This is a pointer to the memory map entry you want to write. For
                                                      example, if you had a single entry you wanted to fill out named
@@ -61,10 +64,10 @@ typedef volatile struct _MemoryMapEntryStruct_ {
                                                      returns 0, stop; that means it's finished. If this returns
                                                      FFFFFFFFh, that means E820 is not supported.
 
-    This function calls the BIOS function int 15h, eax E820h, which returns a memory map in the format of the
+    This function calls the BIOS function int 15h, eax e820h, which returns a memory map in the format of the
     MemoryMapEntryStruct table. You call this function with the
 
-    The BIOS function takes a few operands; eax must be E820h, ebx must be the entry number, es:di must be the address
+    The BIOS function takes a few operands; eax must be e820h, ebx must be the entry number, es:di must be the address
     of the buffer where the table is stored, ecx must be size of that buffer, and edx must be 534D4150h,
     which is ASCII for 'SMAP'.
 
@@ -77,9 +80,9 @@ typedef volatile struct _MemoryMapEntryStruct_ {
 
 uint32 __attribute__((noinline)) GetMemoryMapEntry(MemoryMapEntryStruct* Entry, volatile uint32 EntryNum) {
 
-  static uint32 IntCall = 0x0000E820;
-  static uint32 Signature = 0x534D4150;
-  static uint32 EntrySize = 24;
+  static uint32 IntCall = 0xE820;
+  uint32 Signature = 0x534D4150;
+  uint32 EntrySize = 24;
 
   __asm__ volatile( "int $0x15" :
                     "=a"  (Signature),  "=b"  (EntryNum) :

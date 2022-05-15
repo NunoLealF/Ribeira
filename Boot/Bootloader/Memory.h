@@ -5,10 +5,13 @@
    You should have received a copy of the CC0 Public Domain Dedication along with this software.
    If not, see <http://creativecommons.org/publicdomain/zero/1.0/>. */
 
+// WARNING: This is 16-bit C code. You should compile this, along with any other files from the second stage
+// bootloader, with the -m16 (or equivalent) flag.
+
 #ifndef _MEMORY_H_
 #define _MEMORY_H_
 
-typedef volatile struct     _MemoryMapEntryStruct_ {
+typedef volatile struct _MemoryMapEntryStruct_ {
 
   uint32 LowBaseAddress;
   uint32 HighBaseAddress;
@@ -17,7 +20,7 @@ typedef volatile struct     _MemoryMapEntryStruct_ {
   uint32 Type;
   uint32 UnusedAcpi;
 
-} __attribute__((packed))   MemoryMapEntryStruct;
+} __attribute__((packed)) MemoryMapEntryStruct;
 
 int __attribute__((noinline)) GetMemoryMapEntry(MemoryMapEntryStruct* Entry, volatile uint32 EntryNum);
 
